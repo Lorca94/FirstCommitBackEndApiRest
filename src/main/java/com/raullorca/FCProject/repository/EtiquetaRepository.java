@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface EtiquetaRepository extends JpaRepository<Etiqueta, Long> {
     Optional<Etiqueta> findById(Long id);
-    List<Etiqueta> findByEtiqueta(String etiqueta);
+    Etiqueta findByEtiqueta(String etiqueta);
+    boolean existsByEtiqueta(String etiqueta);
 
 }

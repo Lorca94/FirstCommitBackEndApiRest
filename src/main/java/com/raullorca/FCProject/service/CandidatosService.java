@@ -8,13 +8,13 @@ import java.util.Optional;
 
 public interface CandidatosService {
     List<Candidato> findAll();
-    void saveCandidato(String email, Candidato candidato);
+    void saveCandidato(Candidato candidato);
     Candidato addUserToCandidato(String email, Candidato candidato);
     Candidato findByEmail(String email);
     List<Candidato>getCandidatos();
     boolean existsById(Long id);
     boolean existsByEmail(String email);
     Optional<Candidato> findById(Long id);
-    void updateCandidato(Candidato candidato);
-    void relationEtiquetas(Candidato candidato, Etiqueta etiqueta);
+    void addEtiquetaToCandidato(Candidato candidato, Etiqueta etiqueta) throws Exception;
+    void deleteById(Long id);
 }

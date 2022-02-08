@@ -12,22 +12,24 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class CandidatosServiceImpl implements CandidatosService{
+public class CandidatosServiceImpl implements CandidatosService {
 
+    //Repositories a usar
     private final CandidatosRepository candidatosRepository;
     private final UserService userService;
     private final EtiquetaRepository etiquetaRepository;
 
-
+    //Constructor
     public CandidatosServiceImpl(CandidatosRepository candidatosRepository, UserService userService,
-                                 EtiquetaRepository etiquetaRepository){
-        this.candidatosRepository=candidatosRepository;
+                                 EtiquetaRepository etiquetaRepository) {
+        this.candidatosRepository = candidatosRepository;
         this.userService = userService;
         this.etiquetaRepository = etiquetaRepository;
     }
 
+    // ====================Obtención de candidatos====================
     @Override
-    public List<Candidato> findAll(){
+    public List<Candidato> findAll() {
         return candidatosRepository.findAll();
     }
 
@@ -42,16 +44,11 @@ public class CandidatosServiceImpl implements CandidatosService{
     }
 
     @Override
-    public void updateCandidato(Candidato candidato) {
-
+    public Candidato findByEmail(String email) {
+        return candidatosRepository.findByEmail(email);
     }
 
-    @Override
-    public void relationEtiquetas(Candidato candidato, Etiqueta etiqueta) {
-
-    }
-
-
+    // ====================Existencia de candidatos====================
     @Override
     public boolean existsById(Long id) {
         return candidatosRepository.existsById(id);
@@ -62,9 +59,21 @@ public class CandidatosServiceImpl implements CandidatosService{
         return candidatosRepository.existsByEmail(email);
     }
 
+    // ====================Guardado y eliminado de candidatos====================
     @Override
-    public Candidato findByEmail(String email) {
-        return candidatosRepository.findByEmail(email);
+    public void saveCandidato(Candidato candidato) {
+        candidatosRepository.save(candidato);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        candidatosRepository.deleteById(id);
+    }
+
+    // ====================Relación entre entidades candidatos-entidad====================
+    @Override
+    public void addEtiquetaToCandidato(Candidato candidato, Etiqueta etiqueta) throws Exception {
+        candidato.addEtiqueta(etiqueta);
     }
 
     @Override
@@ -72,11 +81,5 @@ public class CandidatosServiceImpl implements CandidatosService{
         AppUser user = userService.findByEmail(emailUser);
         candidato.setAppUserRel(user);
         return candidato;
-    }
-
-    @Override
-    public void saveCandidato(String emailUser, Candidato candidato) {
-        Candidato newCandidato = addUserToCandidato(emailUser, candidato);
-        candidatosRepository.save(newCandidato);
     }
 }

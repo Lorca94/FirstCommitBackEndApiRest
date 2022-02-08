@@ -2,14 +2,12 @@ package com.raullorca.FCProject.controller;
 
 import com.raullorca.FCProject.entity.Candidato;
 import com.raullorca.FCProject.entity.Etiqueta;
-import com.raullorca.FCProject.entity.RelatedCanEt;
 import com.raullorca.FCProject.repository.CandidatosRepository;
-import com.raullorca.FCProject.repository.RelatedCanEtRepository;
+import com.raullorca.FCProject.security.payload.AddEtiquetRequest;
 import com.raullorca.FCProject.security.payload.MessageResponse;
 import com.raullorca.FCProject.security.payload.RegisterCandidatoRequest;
 import com.raullorca.FCProject.service.CandidatosService;
 import com.raullorca.FCProject.service.EtiquetaService;
-import com.raullorca.FCProject.service.RelatedCanEtService;
 import com.raullorca.FCProject.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,25 +19,21 @@ import java.util.Optional;
 @RequestMapping("/api/candidatos")
 public class CandidatosController {
 
-    //Servicios que se van a necesitar
+    //Servicios que se van a utilizar
     @Autowired
     private final UserService userService;
     @Autowired
     private final CandidatosService candidatosService;
     @Autowired
     private final EtiquetaService etiquetaService;
-    @Autowired
-    private final RelatedCanEtService relationService;
 
 
     //Constructor
     public CandidatosController(UserService userService, CandidatosRepository candidatosRepository,
-                                CandidatosService candidatosService, EtiquetaService etiquetaService,
-                                RelatedCanEtService relationService){
+                                CandidatosService candidatosService, EtiquetaService etiquetaService){
         this.userService = userService;
         this.candidatosService=candidatosService;
         this.etiquetaService=etiquetaService;
-        this.relationService=relationService;
 
     }
 
@@ -68,7 +62,6 @@ public class CandidatosController {
                         () -> ResponseEntity.notFound().build()
                 );
     }
-
 
     /**
      * Registra un nuevo candidato, una etiqueta y la relación entre ambos.
@@ -100,28 +93,33 @@ public class CandidatosController {
                             .body(new MessageResponse("Error: El email que estás intentando registrar ya existe."));
                 // OK
                 case 4:
-                    //Creamos usuario y etiqueta
-                    Candidato candidato = new Candidato(registerCandidato.getNombreCompleto(), registerCandidato.getEmail(),
-                            registerCandidato.getTelefono(), registerCandidato.getCiudad(), registerCandidato.getPais(),
-                            registerCandidato.getPresencialidad(),registerCandidato.getTraslado(),registerCandidato.getImagen(),
-                            registerCandidato.getCurriculum());
-                    Etiqueta etiqueta = new Etiqueta(registerCandidato.getEtiqueta());
+                    //Se crea usuario
+                    Candidato candidato = new Candidato(registerCandidato.getNombreCompleto(),
+                            registerCandidato.getEmail(),registerCandidato.getTelefono(),
+                            registerCandidato.getCiudad(), registerCandidato.getPais(),
+                            registerCandidato.getPresencialidad(), registerCandidato.getTraslado(),
+                            registerCandidato.getImagen(), registerCandidato.getCurriculum());
                     try{
-                        //Se guarda en BBDD el nuevo candidato y la nueva etiqueta
-                        etiquetaService.createEtiqueta(etiqueta);
-                        candidatosService.saveCandidato(registerCandidato.getAppUserRel(),candidato);
-
-                        //Se añade el id, para evitar los problemas con optional, se tomará el último valor del tamaño de la tabla en BBDD
-                        candidato.setId((long) candidatosService.findAll().size());
-                        etiqueta.setId((long) etiquetaService.findAll().size());
-
-                        //Se crea la relación
-                        relationService.createRelation(candidato,etiqueta);
-
+                        //Se añade la relación candidato/usuario
+                        candidatosService.addUserToCandidato(registerCandidato.getAppUserRel(), candidato);
+                        //Se comprueba si la etiqueta ya existe
+                        if(etiquetaService.existsByEtiqueta(registerCandidato.getEtiqueta())){
+                            //Se trae la etiqueta y se añade la relación candidato/etiqueta
+                            Etiqueta etiqueta = etiquetaService.findByEtiqueta(registerCandidato.getEtiqueta());
+                            candidato.addEtiqueta(etiqueta);
+                        } else {
+                            //En caso de no existir se crea la etiqueta, y se añade a la BBDD
+                            Etiqueta etiqueta = new Etiqueta(registerCandidato.getEtiqueta());
+                            etiquetaService.createEtiqueta(etiqueta);
+                            //Se añade la etiqueta usando el dato guardado en la BBDD
+                            candidato.addEtiqueta(etiquetaService.findByEtiqueta(etiqueta.getEtiqueta()));
+                        }
+                        //Se guarda el candidato
+                        candidatosService.saveCandidato(candidato);
                         return ResponseEntity.ok().body(new MessageResponse("Candidato creado, con éxito"));
 
                     } catch (Exception e){
-                        throw new Exception("Error al crear el usuario" + e);
+                        throw new Exception("Error al crear el candidato" + e);
                     }
 
             }
@@ -132,21 +130,52 @@ public class CandidatosController {
     }
 
     /**
-     * Muestra etiquetas del candidato, así como el candidato y el usuario que lo ha creado.
-     * @param id de la relacion entre tablas
-     * @return Devuelve el las etiquetas del candidato, así como el candidato y el usuario que lo ha creado.
+     * Actualizar candidato
+     * @param candidato se le pasa un candidato
+     * @return ResponseEntity con el candidato actualizado
      */
-   @GetMapping("/lenguajes/{id}")
-   public ResponseEntity<RelatedCanEt> findRelacion(@PathVariable Long id){
-        Optional<RelatedCanEt> relacion= relationService.findById(id);
-       return relacion
-               .map(
-                       relatedCanEt -> ResponseEntity.ok(relatedCanEt))
-               .orElseGet(
-                       () -> ResponseEntity.notFound().build()
-               );
-   }
+    @PutMapping("/")
+    public ResponseEntity<Candidato> update( Candidato candidato ){
+        // Se comprueba que la id no esté vacía y se actualizan los datos del candidato
+        if ( candidato.getId() == null){
+            return ResponseEntity.badRequest().build();
+        }
+        candidatosService.saveCandidato(candidato);
+        return ResponseEntity.ok(candidato);
+    }
 
+    /**
+     * Añadir etiqueta a un candidato ya creado
+     * @param candidato se pasan los datos del un candidato
+     * @param addEtiquetRequest se utiliza etiqueta Request para pasar la etiqueta añadir
+     * @return devuelve una response Entity de tipo ResponseMessage
+     * @throws Exception en caso de fallo en la actualización del candidato lanzará un error
+     */
+    @PostMapping("/new/etiqueta")
+    public ResponseEntity<MessageResponse> addEtiqueta(Candidato candidato, @RequestBody AddEtiquetRequest addEtiquetRequest) throws Exception {
+        // Se comprueba que la id no esté vacía y se actualizan los datos del candidato
+        if (candidato.getId() == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("No se ha encontrado una ID válida para añadir la etiqueta"));
+        }
+        try {
+            //Se trae el candidato de la BBDD para verífica
+            if(!etiquetaService.existsByEtiqueta(addEtiquetRequest.getEtiqueta())){
+                Etiqueta etiqueta = new Etiqueta(addEtiquetRequest.getEtiqueta());
+                etiquetaService.createEtiqueta(etiqueta);
+            }
+            candidato.addEtiqueta(etiquetaService.findByEtiqueta(addEtiquetRequest.getEtiqueta()));
+            candidatosService.saveCandidato(candidato);
+            return ResponseEntity.ok().body(new MessageResponse("Etiqueta añadida"));
+        }catch (Exception e){
+            throw new Exception(e);
+        }
+    }
+
+    @DeleteMapping("/candidato/{id}")
+    public ResponseEntity<Candidato> deleteCandidato(@PathVariable Long id){
+        candidatosService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
     /**
      * Se comprobarán los datos de candidato pasados por el payload y devolverá un valor entero para poder gestionar
      * un response entity adecuado

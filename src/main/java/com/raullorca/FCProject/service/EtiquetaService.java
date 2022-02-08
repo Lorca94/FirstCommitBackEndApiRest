@@ -7,8 +7,8 @@ import java.util.Optional;
 
 public interface EtiquetaService {
     List<Etiqueta> findAll();
-    Optional<Etiqueta> findById(Long id);
-    List<Etiqueta> findByEtiqueta(String etiqueta);
+    Etiqueta findByEtiqueta(String etiqueta);
     void createEtiqueta(Etiqueta etiqueta);
+    Boolean existsByEtiqueta(String etiqueta);
 
 }

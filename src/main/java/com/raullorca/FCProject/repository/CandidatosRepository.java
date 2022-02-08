@@ -11,4 +11,5 @@ public interface CandidatosRepository extends JpaRepository<Candidato,Long> {
     Optional<Candidato> findById(Long id);
     Candidato findByEmail(String email);
     Boolean existsByEmail(String email);
+    void deleteById(Long id);
 }

@@ -1,8 +1,7 @@
 package com.raullorca.FCProject.entity;
 
 import javax.persistence.*;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Entity
 @Table(name="candidatos")
@@ -38,11 +37,19 @@ public class Candidato {
     @JoinColumn(name = "userId")
     private AppUser appUserRel;
 
+    //Relación con etiquetas
+    @JoinTable(
+            name = "rel_candidatos_etiquetas",
+            joinColumns = @JoinColumn(name = "FK_CANDIDATOS", nullable = false),
+            inverseJoinColumns = @JoinColumn(name="FK_ETIQUETAS", nullable = false)
+    )
+    @ManyToMany(cascade = CascadeType.ALL)
+    private Collection<Etiqueta> etiquetasId;
+
     public Candidato() {}
 
     public Candidato(String nombreCompleto, String email, String telefono, String ciudad, String pais,
-                     Boolean presencialidad, Boolean traslado, String imagen, String curriculum
-                     ){
+                     Boolean presencialidad, Boolean traslado, String imagen, String curriculum){
         this.nombreCompleto = nombreCompleto;
         this.email = email;
         this.telefono = telefono;
@@ -54,6 +61,13 @@ public class Candidato {
         this.curriculum = curriculum;
     }
 
+    public void addEtiqueta(Etiqueta etiqueta){
+        if(this.etiquetasId == null){
+            this.etiquetasId = new ArrayList<>();
+        }
+
+        this.etiquetasId.add(etiqueta);
+    }
 
     public Long getId() {
         return id;
@@ -142,4 +156,6 @@ public class Candidato {
     public void setAppUserRel(AppUser appUserRel) {
         this.appUserRel = appUserRel;
     }
+
+    public Collection<Etiqueta> getEtiquetas() {return etiquetasId;}
 }
